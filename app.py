@@ -1,11 +1,31 @@
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import Flask, render_template, request, session , jsonify, redirect, url_for, get_flashed_messages, flash
 import sql_connection as sc
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key'
 
-@app.route('/')
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+  if request.method == 'POST':
+    username = request.form.get('username')
+    password = request.form.get('password')
+    session['user'] = request.form['username']
+    if username == 'owner' and password == 'owner123':
+      return redirect(url_for('gs'))
+    
+    else :
+      flash('invalid credentials', 'danger')
+      pass
+
+    
+  return render_template('login.html')
+
+
+@app.route('/gs')
 def gs():
-    return render_template('index.html')
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('gs.html')
 
 
 @app.route('/add_product', methods=['POST'])
@@ -42,11 +62,13 @@ def get_products():
 
 @app.route('/products_page')
 def products_page():
+    if 'user' not in session:
+        return redirect(url_for('login'))
     return render_template('products.html')
 
 
 @app.route('/add_customers', methods=['POST'])    
-def addcustomers():
+def add_customers():
     try:
         cursor = sc.cnx.cursor()
         query = "INSERT INTO Customers(name, email, city) VALUES (%s, %s, %s)"
@@ -72,7 +94,10 @@ def get_customers():
 
 @app.route('/customers_page')
 def customers_page():
+    if 'user' not in session:
+        return redirect(url_for('login'))
     return render_template('customer.html')
+
 
 
 @app.route('/add_orders', methods=['POST'])
@@ -92,6 +117,8 @@ def add_orders():
 
 @app.route('/orders_page')
 def orders_page():
+    if 'user' not in session:
+        return redirect(url_for('login'))
     return render_template('orders.html')
 
 @app.route('/get_order_details', methods=['GET'])
@@ -103,6 +130,11 @@ def get_order_details():
     cursor.close()
 
     return jsonify(orders)
+
+@app.route('/logout')   
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
